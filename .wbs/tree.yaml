@@ -1,0 +1,19 @@
+meta:
+  project: test-prd
+  version: 0.1.0
+  prd_source: /tmp/test-prd.md
+  tech_stack: []
+  conventions: See .wbs/context.md
+tree:
+  id: ROOT
+  type: product
+  title: '[Populate from test-prd.md]'
+  objective: '[PRD skill fills this in]'
+  status: pending
+  inputs:
+  - /tmp/test-prd.md
+  constraints: []
+  outputs: []
+  acceptance_criteria: []
+  dependencies: []
+  children: []

@@ -1,0 +1,119 @@
+# WBS Node Schema — canonical reference for the PRD skill/agent
+#
+# Every node at every level of the tree uses this exact structure.
+# The tree is self-similar: a "product" node and a "step" node have identical schemas.
+# The recursion stops when children: [] and the node can be built, tested, and verified
+# independently in a single AI agent session.
+#
+# Valid type values (hierarchy top → bottom):
+#   product → capability → feature → module → work_package → task → step
+#
+# Valid status values:
+#   pending        Not started, dependencies may not be met yet
+#   ready          All dependencies complete, can be picked up now
+#   in_progress    Agent is actively working on it
+#   complete       Implemented and acceptance criteria verified
+#   blocked        Cannot proceed — see notes field for reason
+#   decomposed     Was a leaf; re-decomposed into children (see children list)
+#
+# Valid dependency types:
+#   data           This node needs output/data produced by the dependency
+#   sequence       This node must start after the dependency completes
+#   runtime        Both nodes must be deployed/running together
+#
+# Agent types (informational — used by orchestrators to route leaves):
+#   architect | api_builder | ui_builder | test_writer | docs_writer | deployer
+#
+# PRD skill contract:
+#   - Generate a tree.yaml where the top-level 'tree' key is the root product node
+#   - Decompose to work_package level initially; leaves will be further decomposed at execution time
+#   - Every node must have a unique ID following the convention: DOMAIN-FEATURE-UNIT (uppercase)
+#   - Set all statuses to 'pending' on generation
+#   - Populate acceptance_criteria for every node — this is what the executor verifies
+
+---
+# ── Example node (copy and fill in) ─────────────────────────────────────────
+
+id: "AUTH-MAGICLINK-API"               # Unique. Convention: DOMAIN-FEATURE-UNIT in UPPER-KEBAB
+type: work_package                      # product|capability|feature|module|work_package|task|step
+title: "Build magic-link request endpoint"
+objective: "Accept an email address and issue a short-lived signed login token"
+status: pending                         # pending on generation; wbs.py manages transitions
+
+inputs:
+  - "User model schema"
+  - "Auth requirements doc"
+
+constraints:
+  - "Stateless API — no session stored server-side"
+  - "Token expiry: 15 minutes"
+  - "Rate-limit: 5 requests per email per hour"
+
+outputs:
+  - "POST /auth/magic-link endpoint"
+  - "Token persistence layer (Redis key)"
+  - "Validation test suite"
+
+acceptance_criteria:
+  - "Invalid email format returns 422"
+  - "Valid request returns 200 and sends email (mock in test)"
+  - "Token stored in Redis with 15-minute TTL"
+  - "Second request within rate-limit window returns 429"
+
+verify:                                 # Optional. Shell commands run by 'wbs.py done' —
+  - "pytest tests/auth -q"              # all must exit 0 or 'done' refuses to mark complete.
+
+dependencies:
+  - id: "AUTH-USER-REPO"               # Must match an id that exists elsewhere in the tree
+    type: data                          # data|sequence|runtime
+  - id: "AUTH-VERIFY-TOKEN"            # Example of a sequence dep within the same domain
+    type: sequence
+
+owner: null                             # null or team/role string e.g. "backend-team"
+agent_type: api_builder                 # null or: architect|api_builder|ui_builder|test_writer|docs_writer|deployer
+effort_estimate: "1d"                   # null or: "2h", "1d", "3d"
+notes: null                             # Additional context, blockers, decisions
+
+children: []                            # Empty = leaf node.
+                                        # If decomposed: add child nodes with this same schema.
+
+
+# ── Full tree.yaml structure ──────────────────────────────────────────────────
+#
+# meta:
+#   project: "My SaaS App"
+#   version: "0.1.0"
+#   prd_source: "docs/prd.md"
+#   tech_stack:
+#     - "Python 3.12"
+#     - "FastAPI"
+#     - "PostgreSQL"
+#     - "Redis"
+#   conventions: "See .wbs/context.md"
+#
+# tree:
+#   id: ROOT
+#   type: product
+#   title: "My SaaS App"
+#   objective: "..."
+#   status: pending
+#   inputs: ["docs/prd.md"]
+#   constraints: []
+#   outputs: ["Deployed production app"]
+#   acceptance_criteria: ["All capability nodes complete"]
+#   dependencies: []
+#   children:
+#     - id: CAP-AUTH
+#       type: capability
+#       title: "Authentication"
+#       objective: "..."
+#       status: pending
+#       ...
+#       children:
+#         - id: FEAT-PASSWORDLESS
+#           type: feature
+#           ...
+#           children:
+#             - id: AUTH-MAGICLINK-API   ← work_package leaf (see example above)
+#               ...
+#               children: []
