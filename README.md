@@ -18,6 +18,15 @@ The recursion stops when a node is small enough for a single AI agent session. T
 
 ---
 
+## Installation
+
+**Skills:** Copy `skills/wbs-prd/` and `skills/wbs-exec/` to `~/.claude/skills/`, or symlink:
+
+```bash
+ln -s /path/to/recursive-development/skills/wbs-prd ~/.claude/skills/
+ln -s /path/to/recursive-development/skills/wbs-exec ~/.claude/skills/
+```
+
 ## Quick start
 
 **Requires:** Python 3.10+ and [`uv`](https://docs.astral.sh/uv/) (or `pip install pyyaml`)
