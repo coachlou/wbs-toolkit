@@ -234,6 +234,8 @@ def cmd_done(args):
             f"Complete them first — 'done' propagates upward automatically."
         )
     failures = run_verify(node)
+    # meta.verify: project-wide regression gate (full suite, lint, ...) run on every done
+    failures += run_verify({"verify": tree_data.get("meta", {}).get("verify")})
     if failures:
         sys.exit(f"Error: verify failed for '{args.id}':\n" + "\n".join(failures))
     node["status"] = "complete"

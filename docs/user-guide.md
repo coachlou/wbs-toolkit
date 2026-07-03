@@ -198,6 +198,7 @@ The AI should read `context_file` alongside this output before implementing.
 
 ### What `done` does
 
+0. Refuses if the node has incomplete children, or if any `verify` command exits non-zero — the node's own `verify` list plus the optional `meta.verify` list (project-wide regression gate: full test suite, lint, typecheck — runs on every `done`)
 1. Sets the node's `status` to `complete`
 2. Walks up the parent chain
 3. Marks each parent `complete` if all its children are `complete`
@@ -371,6 +372,7 @@ uv run wbs.py init docs/prd.md
 | All `dependencies[].id` values resolve to existing nodes | All nodes |
 | `dependencies[].type` is one of: `data`, `sequence`, `runtime` | All nodes |
 | `acceptance_criteria` list is non-empty | Leaf nodes (not `decomposed`) |
+| No dependency cycles (including a node depending on its own ancestor) | Whole tree |
 
 A tree that fails validation will produce incorrect behavior from `next` and `done`. Always fix validation errors before executing.
 
