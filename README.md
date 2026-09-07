@@ -43,7 +43,8 @@ uv run wbs.py strategy legacy_bottom_up
 
 # 3. Implement the leaf (AI reads the JSON output and acts)
 
-# 4. Mark it done — verification runs, then completion propagates upward
+# 4. Mark it done — runs the node's verify commands + tree.yaml's meta.verify
+#    (project-wide gate: full test suite, lint, typecheck), then propagates upward
 uv run wbs.py done <node-id>
 
 # 5. If the final Proof Slice leaf completed, review the evidence and explicitly approve
