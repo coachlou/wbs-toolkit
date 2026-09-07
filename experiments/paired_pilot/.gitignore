@@ -1,0 +1,6 @@
+runs/
+runs-*/
+__pycache__/
+# Exploratory or interrupted protocol outputs are retained locally only.
+results-*-protocol-invalid.json
+results-*-usage-interrupted.json
