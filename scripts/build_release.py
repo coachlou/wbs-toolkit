@@ -23,7 +23,7 @@ REQUIRED_FILES = {
     "tests/test_wbs.py",
     "wbs.py",
 }
-ALLOWED_PREFIXES = ("skills/",)
+ALLOWED_PREFIXES = ("distro/", "skills/")
 FORBIDDEN_PARTS = {
     ".DS_Store",
     ".claude",

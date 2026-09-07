@@ -15,6 +15,7 @@ class ReleaseBuilderTest(unittest.TestCase):
             {
                 *selectable_required_files(),
                 "docs/user-guide.md",
+                "distro/SKILL.md",
                 "skills/wbs-exec/SKILL.md",
                 ".wbs/tree.yaml",
                 ".wbs/context.md",
@@ -27,6 +28,7 @@ class ReleaseBuilderTest(unittest.TestCase):
 
         self.assertIn(".wbs/node-template.yaml", selected)
         self.assertIn("docs/user-guide.md", selected)
+        self.assertIn("distro/SKILL.md", selected)
         self.assertNotIn(".wbs/tree.yaml", selected)
         self.assertNotIn("chat_exports/conversation.md", selected)
         self.assertNotIn("experiments/results.json", selected)

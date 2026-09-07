@@ -38,6 +38,25 @@ uv run /path/to/recursive-development/wbs.py init docs/prd.md
 
 `init` creates `.wbs/tree.yaml`, `.wbs/context.md`, and copies the bundled schema to `.wbs/node-template.yaml`. If the PRD skill creates the tree directly, keep `wbs.py` available at the project root or provide its explicit toolkit path.
 
+### Ambient-folder installation
+
+The repository also ships a portable `distro/` source package for the
+`.aai`/`.ailib` model. After it is synced to the ambient library as
+`wbs-toolkit`, install it into a project with the ambient-folder installer:
+
+```bash
+bash "${CLAUDE_PLUGIN_ROOT}/library/ambient-folder/install.sh" \
+  wbs-toolkit --check /path/to/project
+bash "${CLAUDE_PLUGIN_ROOT}/library/ambient-folder/install.sh" \
+  wbs-toolkit /path/to/project
+```
+
+That stamps an owned `.aai/` behavior profile once, vendors a pinned
+`.ailib/wbs-toolkit/` runtime and skills, and creates `wbs.sh` at the project
+root. Run `bash wbs.sh next` (or any other WBS command) from the installed
+project. Re-running the installer refreshes `.ailib/` without touching the
+project’s `.aai/` profile or `.wbs/` execution state.
+
 ## Quick start
 
 **Requires:** Python 3.10+ and [`uv`](https://docs.astral.sh/uv/) (or `pip install pyyaml`)

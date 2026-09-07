@@ -10,9 +10,16 @@ The deterministic builder includes only:
 - `wbs.py` and `.wbs/node-template.yaml`;
 - recipient-facing `docs/`;
 - `wbs-prd`, `wbs-exec`, and their references;
+- the `distro/` source for the portable `.aai` / `.ailib` capability;
 - the focused WBS runtime tests.
 
 The core distro excludes live repository WBS state, chat exports, experiments and raw pilot evidence, local settings, caches, prior archives, and unrelated artifacts. Experimental evidence remains available in the source repository and may be published as a separate evidence package.
+
+The portable source is intentionally not a second WBS implementation. When
+synced into the ambient library, `distro/APP_FILES` creates a pinned `app/`
+snapshot with the existing CLI, schema, skills, and recipient documentation;
+`.aai/` templates remain owned by the installed project, while `.ailib/` is
+the refreshable copy.
 
 ## Preconditions
 
