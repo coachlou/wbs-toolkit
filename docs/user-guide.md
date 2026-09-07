@@ -2,6 +2,8 @@
 
 > The parent defines intent. The children define composition. The leaves define execution.
 
+The normative intake and synthesis boundary is defined in the [Outcome-Driven WBS Specification](outcome-driven-specification.md).
+
 ---
 
 ## Contents
@@ -10,13 +12,14 @@
 2. [The node schema](#the-node-schema)
 3. [The wbs-prd skill — speccing a project](#the-wbs-prd-skill--speccing-a-project)
 4. [The execution loop](#the-execution-loop)
-5. [Dependency types](#dependency-types)
-6. [Re-decomposition](#re-decomposition)
-7. [wbs.py command reference](#wbspy-command-reference)
-8. [Validation rules](#validation-rules)
-9. [context.md — the executor's briefing file](#contextmd--the-executors-briefing-file)
-10. [Tips for AI agents](#tips-for-ai-agents)
-11. [Working with multi-tree systems](#working-with-multi-tree-systems)
+5. [Proof Slice Gate](#proof-slice-gate)
+6. [Dependency types](#dependency-types)
+7. [Re-decomposition](#re-decomposition)
+8. [wbs.py command reference](#wbspy-command-reference)
+9. [Validation rules](#validation-rules)
+10. [context.md — the executor's briefing file](#contextmd--the-executors-briefing-file)
+11. [Tips for AI agents](#tips-for-ai-agents)
+12. [Working with multi-tree systems](#working-with-multi-tree-systems)
 
 ---
 
@@ -28,7 +31,7 @@ The system treats software development as a recursive Work Breakdown Structure. 
 2. **What child units fully cover this scope?** (`children`)
 3. **Is this node executable yet?** (is it a leaf? are all dependencies complete?)
 
-The tree is stored in `.wbs/tree.yaml`. `wbs.py` manages tree state — it finds the next executable leaf, records completion, propagates status upward, and validates the schema. The AI agent (Claude Code, Codex, or any coder) reads the leaf context and implements it.
+The tree is stored in `.wbs/tree.yaml`. `wbs.py` manages tree state — it finds the next executable leaf, records completion, propagates status upward, and validates the schema. The AI agent (Claude Code, Codex, or any coder) reads the leaf context and implements it. An optional top-level `proof_slice` can temporarily restrict execution to one architectural proof that crosses delivery-branch ownership boundaries before ordinary traversal begins.
 
 ### Hierarchy
 
@@ -54,6 +57,14 @@ pending → ready → in_progress → complete
 
 `wbs.py next` only returns nodes with status `pending` or `ready` whose dependencies are all `complete`. `wbs.py done` marks a node `complete` and walks up the parent chain, marking any parent whose children are all complete.
 
+A Proof Slice has its own gate lifecycle:
+
+```text
+pending → verified → approved
+```
+
+`verified` means its end-to-end commands passed. It does not authorize broader work; `approve-proof` rechecks the evidence and records explicit approval.
+
 ---
 
 ## The node schema
@@ -65,6 +76,7 @@ id: AUTH-MAGICLINK-API          # UPPER-KEBAB. Convention: see hierarchy above.
 type: work_package              # product|capability|feature|module|work_package|task|step
 title: "Build magic-link request endpoint"
 objective: "Accept email and issue a signed short-lived login token"
+source_requirements: [REQ-001] # Stable outcome IDs from context.md
 status: pending                 # pending|ready|in_progress|complete|blocked|decomposed
 
 inputs:                         # What this node needs before it can start
@@ -128,13 +140,15 @@ The `wbs-prd` skill generates `.wbs/tree.yaml` and `.wbs/context.md` from a stru
 
 ### What the interview covers
 
-The skill interviews you in hierarchy order:
+The interview stays in product language:
 
-1. **Scope** — single-sentence objective, user types, what's out of scope, definition of done at the top level
-2. **Capabilities** — the 3–7 major independently-deliverable domains
-3. **Features** — what makes up each capability, which features depend on others
-4. **Work packages** — discrete deliverables within each feature (endpoints, models, UI components, test suites)
-5. **Implementation context** — tech stack, non-functional requirements, external integrations, conventions
+1. **Purpose and scope** — the problem, actors, successful product result, exclusions, and alternatives
+2. **Functional journeys** — what triggers each behavior, what information enters, what changes, and what result the actor observes
+3. **Evidence and failures** — what proves each result, material edge cases, and evidence that would invalidate the plan
+4. **Priority and boundaries** — required-now, later, and excluded results; sequencing commitments and affected consumers
+5. **Operating constraints** — existing systems and contracts, security, performance, compliance, compatibility, and organization-wide quality evidence
+
+The interview does not ask you to define capabilities, delivery branches, work packages, dependencies, tracers, or Proof Slice membership. After you confirm the functionality-and-evidence ledger, the PRD writer derives that representation from the requirements and repository.
 
 **One question at a time. The skill always gives a recommended answer for you to accept or redirect.** If a question can be answered by reading the codebase, the skill reads the codebase instead of asking.
 
@@ -144,8 +158,22 @@ After the interview, the skill writes:
 
 - **`.wbs/tree.yaml`** — the complete WBS tree, status `pending` on all nodes, decomposed to `work_package` level
 - **`.wbs/context.md`** — tech stack, conventions, architecture notes, NFRs — loaded by the AI executor with every leaf
+- **Requirement traceability** — stable `REQ-*` outcomes in context.md and `source_requirements` mappings on generated nodes
+- **Optional `proof_slice`** — only when the minimum architectural proof crosses delivery-branch ownership boundaries; omitted when one branch tracer already supplies the proof
 
 Then runs `wbs.py validate` and `wbs.py status` so you see the result before execution starts.
+
+New trees set `meta.execution_strategy: proof_slice_first`. Existing trees without the field resolve to the same default. Use `wbs.py strategy legacy_bottom_up` only when you deliberately want unrestricted legacy traversal.
+
+### Execution units, delivery units, and proof units
+
+A leaf work package is sized for one agent session. An outcome-bearing feature branch is a larger delivery unit: its implementation leaves can be built bottom-up, but the branch is not empirically integrated until its explicit `*-E2E` tracer leaf passes. The tracer depends on the branch interfaces it composes and exercises the real journey from entry point to observable result.
+
+When that tracer is contained within one feature branch, ordinary depth-first traversal is sufficient. When the smallest meaningful tracer crosses feature or capability ownership boundaries, the same leaves—including the cross-branch tracer—are selected through the optional Proof Slice Gate.
+
+The PRD writer derives each delivery branch, tracer, entry/result boundary, interface dependency, and provisional contract from confirmed outcomes. It records the mapping in `.wbs/context.md` and connects generated nodes back to stable `REQ-*` IDs through `source_requirements`. A provisional interface becomes evidence-backed when its tracer passes; if the tracer changes the contract, affected consumers and tests are reconciled before the branch is treated as complete.
+
+See [Outcome-Driven WBS Specification](outcome-driven-specification.md) for the audited intake/synthesis boundary and acceptance criteria.
 
 ---
 
@@ -162,6 +190,9 @@ uv run wbs.py show AUTH-MAGICLINK-API
 
 # Mark done — propagates upward
 uv run wbs.py done AUTH-MAGICLINK-API
+
+# Only when done reports awaiting_proof_approval: review, then explicitly approve
+uv run wbs.py approve-proof
 
 # Check progress
 uv run wbs.py status
@@ -219,6 +250,66 @@ When the final leaf of a subtree completes, you'll see the cascade:
   "propagated_complete": ["CAP-AUTH", "ROOT"]
 }
 ```
+
+---
+
+## Proof Slice Gate
+
+Normal depth-first traversal is already vertical when an outcome-bearing feature contains its implementation and tracer leaves. A Proof Slice is only for the narrower case where the first architectural proof crosses delivery-branch ownership boundaries.
+
+### Strategy selection
+
+```bash
+# Inspect the effective configuration
+uv run wbs.py strategy
+
+# Default: enforce a declared Proof Slice
+uv run wbs.py strategy proof_slice_first
+
+# Compatibility: ignore the gate and use unrestricted dependency-aware DFS
+uv run wbs.py strategy legacy_bottom_up
+```
+
+The setting is persisted as `meta.execution_strategy`. Missing values default to `proof_slice_first`, so existing trees do not require migration. In legacy mode, a `proof_slice` remains visible for provenance but `status` reports it as unenforced. Strategy changes require explicit user direction.
+
+It is a top-level execution overlay, not a node or second hierarchy:
+
+```yaml
+proof_slice:
+  id: PROOF-FIRST-RUN
+  objective: A new user signs in and creates one persisted workspace
+  hypothesis: Auth, API, persistence, and UI boundaries compose without redesign
+  nodes:
+    - AUTH-MINIMUM-FLOW
+    - WORKSPACE-CREATE-DATA
+    - WORKSPACE-CREATE-API
+    - UI-FIRST-RUN
+    - FIRST-RUN-E2E
+  acceptance_criteria:
+    - A browser completes the journey from sign-in to persisted workspace
+  verify:
+    - pytest tests/e2e/test_first_run.py -q
+  status: pending
+```
+
+The member list is ordered preference, not a substitute for dependency edges. Every unresolved dependency of a member must also be listed. Do not invent `sequence` dependencies solely to manipulate product priority.
+
+While the proof is `pending`:
+
+1. `next` considers proof members only and includes the proof objective and hypothesis in its output.
+2. `start` and `done` reject non-proof nodes.
+3. If no member is executable, `next` returns `proof_slice_blocked` with each member's status and unmet dependencies.
+4. Completing the final member runs node verification, `meta.verify`, and the proof's end-to-end `verify` before changing YAML state.
+
+If all checks pass, the proof becomes `verified` and `next` returns `awaiting_proof_approval`. Review what the proof demonstrated and what it invalidated. On explicit human approval:
+
+```bash
+uv run wbs.py approve-proof
+```
+
+The command re-runs the end-to-end proof, records `approved_at`, and restores ordinary depth-first traversal. A failed check leaves the tree unchanged.
+
+If a proof member is re-decomposed, replace its ID in `proof_slice.nodes` with the new dependency-closed leaf IDs before running `validate`.
 
 ---
 
@@ -319,6 +410,24 @@ Marks a node `decomposed`. The AI then edits `tree.yaml` to add children, then r
 uv run wbs.py decompose AUTH-MAGICLINK-API
 ```
 
+### `strategy [name]`
+
+Shows the effective execution strategy when called without an argument. Passing a name persists the project configuration in `meta.execution_strategy`.
+
+```bash
+uv run wbs.py strategy
+uv run wbs.py strategy proof_slice_first
+uv run wbs.py strategy legacy_bottom_up
+```
+
+### `approve-proof`
+
+Re-runs a verified Proof Slice's end-to-end commands, records approval, and unlocks ordinary traversal. It refuses pending proofs and must only be called after explicit human approval.
+
+```bash
+uv run wbs.py approve-proof
+```
+
 ### `status`
 
 Progress dashboard.
@@ -327,11 +436,14 @@ Progress dashboard.
 uv run wbs.py status
 # {
 #   "project": "client-portal",
+#   "execution_strategy": "proof_slice_first",
 #   "total_nodes": 12,
 #   "complete": 4,
 #   "completion_pct": 33,
 #   "by_status": {"complete": 4, "pending": 7, "in_progress": 1},
-#   "next": "AUTH-MAGICLINK-VERIFY"
+#   "next": "AUTH-MAGICLINK-VERIFY",
+#   "scheduler_status": "ready",
+#   "proof_slice": null
 # }
 ```
 
@@ -368,22 +480,32 @@ uv run wbs.py init docs/prd.md
 | Required fields present (`id`, `type`, `title`, `objective`, `status`) | All nodes |
 | `type` is one of: `product`, `capability`, `feature`, `module`, `work_package`, `task`, `step` | All nodes |
 | `status` is one of: `pending`, `ready`, `in_progress`, `complete`, `blocked`, `decomposed` | All nodes |
+| `meta.execution_strategy` is `proof_slice_first` or `legacy_bottom_up` when present | Whole tree |
+| `source_requirements`, when present, is a list of non-empty requirement IDs | All nodes |
 | No duplicate node IDs | Whole tree |
 | All `dependencies[].id` values resolve to existing nodes | All nodes |
 | `dependencies[].type` is one of: `data`, `sequence`, `runtime` | All nodes |
 | `acceptance_criteria` list is non-empty | Leaf nodes (not `decomposed`) |
 | No dependency cycles (including a node depending on its own ancestor) | Whole tree |
+| Proof Slice fields, status, and commands are present and valid | Optional `proof_slice` |
+| Proof members exist, are unique leaves, and include every unresolved dependency | Optional `proof_slice` |
+| A `verified` or `approved` proof has no incomplete members | Optional `proof_slice` |
 
-A tree that fails validation will produce incorrect behavior from `next` and `done`. Always fix validation errors before executing.
+All read and state-management commands except `init` and `validate` refuse an invalid tree. Fix validation errors before executing.
 
 ---
 
 ## context.md — the executor's briefing file
 
-`.wbs/context.md` is the project-level context file the AI loads alongside every leaf node. It answers everything the node schema doesn't: what tech stack, what conventions, what architecture decisions, what non-functional constraints.
+`.wbs/context.md` is the project-level context file the AI loads alongside every leaf node. It begins with the confirmed outcome ledger, then records the PRD writer's derived delivery mapping and implementation context.
 
 ```markdown
 # Project Context
+
+## Outcome Requirements
+| ID | Actor | Trigger | Observable result | Evidence | Failure behavior | Priority | Constraints / assumptions |
+|---|---|---|---|---|---|---|---|
+| REQ-001 | Client | Requests a magic link | Receives an authenticated session | End-to-end browser test | Invalid and expired links are rejected | Required now | Complete within 60 seconds |
 
 ## Tech Stack
 - Python 3.12, FastAPI, Pydantic v2
@@ -395,6 +517,12 @@ A tree that fails validation will produce incorrect behavior from `next` and `do
 - Tests: pytest + httpx; no DB mocks — use test database
 - Errors: RFC 9457 Problem Details format
 
+## Delivery Branches
+- AUTH-MAGICLINK → REQ-001
+- Tracer: AUTH-MAGICLINK-E2E
+- Entry → result: POST /auth/magic-link → authenticated session
+- Interfaces are provisional until the tracer passes; known consumers are listed here
+
 ## Architecture Notes
 - Monorepo: backend/, frontend/, infra/
 - Multi-tenant: every query scoped by tenant_id from JWT claims
@@ -404,7 +532,7 @@ A tree that fails validation will produce incorrect behavior from `next` and `do
 - SOC 2 Type II: PII encrypted at rest, audit log for auth events
 ```
 
-Keep it dense and factual. No narrative. The AI reads this cold before implementing each leaf.
+Keep it dense and factual. The outcome ledger contains confirmed user requirements; delivery branches and architecture sections are the PRD writer's derived representation. Do not rewrite technical assumptions as if the user supplied them. The AI reads this file cold before implementing each leaf.
 
 ---
 
@@ -415,6 +543,8 @@ When using `wbs.py` as part of an agentic loop:
 **Always read `context_file` before implementing.** The leaf node JSON includes a `context_file` path. Load it. It has the tech stack and conventions that determine how to implement the node correctly.
 
 **Use `show <id>` for full ancestry.** `next` returns only the immediate parent's intent. For nodes deep in the tree, `show` gives you the full chain from ROOT to leaf — useful for understanding *why* a node exists.
+
+**Treat a Proof Slice as an evidence gate.** Work only its returned leaves, report `proof_slice_blocked` rather than escaping to unrelated work, and never call `approve-proof` without explicit user approval.
 
 **Run `validate` after editing `tree.yaml`.** Direct edits (during decompose, or to fix a node) can introduce errors. Validate immediately; don't discover the error three nodes later.
 

@@ -26,10 +26,27 @@
 #
 # PRD skill contract:
 #   - Generate a tree.yaml where the top-level 'tree' key is the root product node
+#   - Set meta.execution_strategy to proof_slice_first unless the user explicitly
+#     selects legacy_bottom_up. Missing values also resolve to proof_slice_first.
+#   - Optionally add one top-level 'proof_slice' when the smallest architectural
+#     proof crosses delivery-branch ownership boundaries. It references dependency-closed
+#     leaf IDs; it does not change the recursive node hierarchy.
 #   - Decompose to work_package level initially; leaves will be further decomposed at execution time
+#   - For every outcome-bearing feature branch, add a final *-E2E tracer leaf whose
+#     genuine dependencies are the branch interfaces it composes.
 #   - Every node must have a unique ID following the convention: DOMAIN-FEATURE-UNIT (uppercase)
 #   - Set all statuses to 'pending' on generation
 #   - Populate acceptance_criteria for every node — this is what the executor verifies
+#
+# Optional top-level Proof Slice Gate:
+# proof_slice:
+#   id: PROOF-FIRST-JOURNEY
+#   objective: "A user completes the smallest real end-to-end journey"
+#   hypothesis: "The selected architecture boundaries compose without redesign"
+#   nodes: [AUTH-MINIMUM, DATA-CREATE, API-CREATE, UI-FIRST-RUN, FIRST-RUN-E2E]
+#   acceptance_criteria: ["The journey succeeds through the real system boundary"]
+#   verify: ["pytest tests/e2e/test_first_run.py -q"]
+#   status: pending  # pending | verified | approved; wbs.py manages transitions
 
 ---
 # ── Example node (copy and fill in) ─────────────────────────────────────────
@@ -38,6 +55,8 @@ id: "AUTH-MAGICLINK-API"               # Unique. Convention: DOMAIN-FEATURE-UNIT
 type: work_package                      # product|capability|feature|module|work_package|task|step
 title: "Build magic-link request endpoint"
 objective: "Accept an email address and issue a short-lived signed login token"
+source_requirements:                    # Stable IDs from context.md Outcome Requirements
+  - "REQ-001"
 status: pending                         # pending on generation; wbs.py manages transitions
 
 inputs:
@@ -84,6 +103,7 @@ children: []                            # Empty = leaf node.
 #   project: "My SaaS App"
 #   version: "0.1.0"
 #   prd_source: "docs/prd.md"
+#   execution_strategy: proof_slice_first  # or legacy_bottom_up
 #   tech_stack:
 #     - "Python 3.12"
 #     - "FastAPI"

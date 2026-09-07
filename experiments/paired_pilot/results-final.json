@@ -1,0 +1,175 @@
+{
+  "model": "gpt-5.6-luna",
+  "reasoning_effort": "medium",
+  "design": "paired sequential leaf sessions; one run per strategy",
+  "execution_order": [
+    "proof_slice_first",
+    "legacy_bottom_up"
+  ],
+  "results": [
+    {
+      "strategy": "proof_slice_first",
+      "order": [
+        "STORE",
+        "API",
+        "JOURNEY",
+        "AUTH",
+        "REPORT"
+      ],
+      "time_to_proof_seconds": 161.408,
+      "total_elapsed_seconds": 243.746,
+      "usage": {
+        "input_tokens": 898646,
+        "cached_input_tokens": 743168,
+        "output_tokens": 9979
+      },
+      "journey_changed_lines_in_preexisting_consumers": 0,
+      "proof_revision": "7ec1ce0e33783781df3cd6ae32845e8219dbf220",
+      "final_tests_passed": true,
+      "leaves": [
+        {
+          "leaf": "STORE",
+          "elapsed_seconds": 61.727,
+          "usage": {
+            "input_tokens": 150953,
+            "cached_input_tokens": 125696,
+            "cache_write_input_tokens": 0,
+            "output_tokens": 2710,
+            "reasoning_output_tokens": 851
+          },
+          "tests": 4
+        },
+        {
+          "leaf": "API",
+          "elapsed_seconds": 46.27,
+          "usage": {
+            "input_tokens": 186204,
+            "cached_input_tokens": 159232,
+            "cache_write_input_tokens": 0,
+            "output_tokens": 1877,
+            "reasoning_output_tokens": 341
+          },
+          "tests": 7
+        },
+        {
+          "leaf": "JOURNEY",
+          "elapsed_seconds": 53.411,
+          "usage": {
+            "input_tokens": 225406,
+            "cached_input_tokens": 172288,
+            "cache_write_input_tokens": 0,
+            "output_tokens": 2139,
+            "reasoning_output_tokens": 304
+          },
+          "tests": 8
+        },
+        {
+          "leaf": "AUTH",
+          "elapsed_seconds": 43.351,
+          "usage": {
+            "input_tokens": 184416,
+            "cached_input_tokens": 159232,
+            "cache_write_input_tokens": 0,
+            "output_tokens": 1735,
+            "reasoning_output_tokens": 436
+          },
+          "tests": 11
+        },
+        {
+          "leaf": "REPORT",
+          "elapsed_seconds": 38.987,
+          "usage": {
+            "input_tokens": 151667,
+            "cached_input_tokens": 126720,
+            "cache_write_input_tokens": 0,
+            "output_tokens": 1518,
+            "reasoning_output_tokens": 236
+          },
+          "tests": 13
+        }
+      ]
+    },
+    {
+      "strategy": "legacy_bottom_up",
+      "order": [
+        "STORE",
+        "AUTH",
+        "API",
+        "REPORT",
+        "JOURNEY"
+      ],
+      "time_to_proof_seconds": 276.89,
+      "total_elapsed_seconds": 276.89,
+      "usage": {
+        "input_tokens": 1028126,
+        "cached_input_tokens": 902912,
+        "output_tokens": 12014
+      },
+      "journey_changed_lines_in_preexisting_consumers": 3,
+      "proof_revision": "bcafdf407b3c9420a3ac41162a06e3bdaa3160ac",
+      "final_tests_passed": true,
+      "leaves": [
+        {
+          "leaf": "STORE",
+          "elapsed_seconds": 58.764,
+          "usage": {
+            "input_tokens": 151167,
+            "cached_input_tokens": 125696,
+            "cache_write_input_tokens": 0,
+            "output_tokens": 2741,
+            "reasoning_output_tokens": 1081
+          },
+          "tests": 3
+        },
+        {
+          "leaf": "AUTH",
+          "elapsed_seconds": 55.298,
+          "usage": {
+            "input_tokens": 217510,
+            "cached_input_tokens": 185600,
+            "cache_write_input_tokens": 0,
+            "output_tokens": 2439,
+            "reasoning_output_tokens": 586
+          },
+          "tests": 6
+        },
+        {
+          "leaf": "API",
+          "elapsed_seconds": 53.124,
+          "usage": {
+            "input_tokens": 211091,
+            "cached_input_tokens": 184576,
+            "cache_write_input_tokens": 0,
+            "output_tokens": 2378,
+            "reasoning_output_tokens": 692
+          },
+          "tests": 9
+        },
+        {
+          "leaf": "REPORT",
+          "elapsed_seconds": 50.993,
+          "usage": {
+            "input_tokens": 184789,
+            "cached_input_tokens": 159232,
+            "cache_write_input_tokens": 0,
+            "output_tokens": 1890,
+            "reasoning_output_tokens": 527
+          },
+          "tests": 11
+        },
+        {
+          "leaf": "JOURNEY",
+          "elapsed_seconds": 58.711,
+          "usage": {
+            "input_tokens": 263569,
+            "cached_input_tokens": 247808,
+            "cache_write_input_tokens": 0,
+            "output_tokens": 2566,
+            "reasoning_output_tokens": 445
+          },
+          "tests": 12
+        }
+      ]
+    }
+  ]
+}

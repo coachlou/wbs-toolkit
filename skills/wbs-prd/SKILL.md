@@ -1,6 +1,7 @@
 ---
 name: wbs-prd
-description: Use this skill when starting a new project, feature, or module — before any code is written. Relentlessly interviews the user to extract scope, capabilities, features, dependencies, and acceptance criteria, then synthesizes the results into a WBS-compatible .wbs/tree.yaml and .wbs/context.md ready for wbs.py to execute. Triggers on: "spec this out", "plan this", "I want to build", "grill me on this", "PRD this", "generate the WBS", "create the tree", "scaffold the tree", "let's plan before we build", or any request to capture requirements before coding.
+description: >-
+  Use this skill when starting a new project, feature, or module — before any code is written. Relentlessly interviews the user about functionality, observable results, evidence, priorities, constraints, and failure behavior, then compiles those requirements into a WBS-compatible .wbs/tree.yaml and .wbs/context.md ready for wbs.py to execute. Triggers on: "spec this out", "plan this", "I want to build", "grill me on this", "PRD this", "generate the WBS", "create the tree", "scaffold the tree", "let's plan before we build", or any request to capture requirements before coding.
 ---
 
 ## Gotchas
@@ -10,16 +11,21 @@ description: Use this skill when starting a new project, feature, or module — 
 - Every leaf node needs at least one `acceptance_criteria` item. Vague or missing criteria make "done" undefined — `wbs.py validate` will reject leaves without them.
 - Dependencies must reference node IDs that exist elsewhere in the same tree. Resolve the order of nodes before writing.
 - Tech stack and conventions belong in `.wbs/context.md`, not in node `constraints`. Node constraints are functional (what the node must/must not do), not environmental.
-- If `.wbs/tree.yaml` already exists, read it and ask whether to overwrite or append new capabilities. Never silently overwrite. When revising, first ask: "What did we learn since the last version that changes the *problem*, not just the plan?" Log the answer in context.md — partial builds reveal problem dimensions the original grilling couldn't see.
+- If `.wbs/tree.yaml` already exists, read it and ask whether the user wants to replace the existing specification or incorporate new requirements. Never silently overwrite. When revising, first ask: "What did we learn since the last version that changes the *problem*, not just the plan?" Log the answer in context.md — partial builds reveal problem dimensions the original grilling couldn't see.
 - `--tree` is a global flag in `wbs.py` — it goes **before** the subcommand: `wbs.py --tree path/tree.yaml validate`, not `wbs.py validate --tree path/tree.yaml`.
 - For deep trees, run `wbs.py show <id>` after `next` to get the full parent chain — `next` only returns the immediate parent's intent.
+- A vertical outcome contained within one delivery branch needs no special machinery. Add the optional top-level `proof_slice` only when the smallest architectural proof crosses delivery-branch ownership boundaries (whether features or capabilities); it is one temporary execution gate, not another hierarchy.
+- Keep the three units distinct: a leaf/work package is an agent execution unit; an outcome-bearing feature branch is a delivery and integration unit; a Proof Slice is a cross-branch authorization unit. Do not flatten all three into generic "work units."
+- Every outcome-bearing feature branch needs an explicit tracer work package (normally `{FEATURE}-E2E`). It depends on the branch leaves whose interfaces compose the outcome and verifies the branch through its real entry and exit boundaries. A parent node's completion propagation does not run parent-level `verify`, so acceptance criteria alone are not a substitute for this leaf.
+- Keep branch, work-package, dependency, tracer, and Proof Slice design out of the user-facing interview. First capture functionality and evidence; derive the technical representation during synthesis using `references/intake-to-wbs.md`.
+- Proof members must be leaf IDs and dependency-closed. Never add fake `sequence` edges merely to force product priority.
 - Run `wbs.py validate` before reporting success. A tree the validator rejects is not done.
 
 ---
 
 ## Phase 1: Grilling
 
-Interview me relentlessly about every aspect of this product or feature until you have enough to populate every field in the WBS tree without uncertainty. Walk down the hierarchy in order — scope, then capabilities, then features, then work packages. Resolve dependencies between decisions one by one.
+Interview me relentlessly about the product's required behavior and observable results. Stay in the user's problem language; do not walk them through the WBS hierarchy or ask them to design its implementation representation.
 
 **Ask one question at a time.** Wait for the answer. Asking multiple questions at once is bewildering.
 
@@ -29,59 +35,63 @@ Interview me relentlessly about every aspect of this product or feature until yo
 
 ### Question sequence
 
-**Scope** → becomes the ROOT node
+Read `references/intake-to-wbs.md` before interviewing. Maintain its outcome-requirement ledger as requirements become clear.
+
+**Purpose and scope**
 - What is the single-sentence objective? What problem does this solve and for whom?
-- Who are the user types (actors who appear in acceptance criteria)?
-- What is the unifying mental model — the one coherent story this design tells? Every capability must map to it; this becomes `## Core Design Concepts` in context.md and the integrity check at synthesis.
+- Who acts, and who receives or observes the result?
+- What is the unifying mental model — the one coherent story this product tells? Every required result must map to it; this becomes `## Core Design Concepts` in context.md and an integrity check at synthesis.
 - What existing system is this most like, and where does it deliberately differ? A good exemplar imports a proven decomposition for free.
 - What is the second-most-viable overall approach, and why isn't it the one? Record the rejected path and one-line rationale — it goes in `## Design Alternatives` in context.md.
 - What is explicitly out of scope? Name it — it becomes root-level constraints.
-- What does "done" look like at the top level?
+- What observable result would make the whole product successful?
 
-**Capabilities** → become `CAP-{DOMAIN}` nodes
-- What are the 3–7 major capability domains? Each should be independently deliverable and map to a core design concept — a capability that maps to none is scope creep or a sign the mental model is wrong.
-- For each: what does "done" look like? What acceptance criteria prove it's complete?
-- For each: was there a materially different way to slice or build this? If yes, one line on why not — into `## Design Alternatives`.
+**Functional journeys and results**
+- What does each actor need to accomplish, starting with the trigger and ending with the result they can observe?
+- What information enters the behavior, what state changes, and what comes back?
+- What must happen before or after from the actor's perspective?
+- Which independently useful result should work first, before broader investment?
 
-**Features** → become `{DOMAIN}-{FEATURE}` nodes, one capability at a time
-- What features make up this capability?
-- Which features must complete before others can start? (dependency type: `sequence`)
-- Which features need data or output produced by another feature? (dependency type: `data`)
-- Which features must be deployed together to function? (dependency type: `runtime`)
-- Acceptance criteria for each feature — including edge cases that would catch a broken implementation.
+**Evidence and failure behavior**
+- What demonstration, test, measurement, or artifact would convince you each result is real?
+- What invalid, unavailable, duplicate, unsafe, or partial conditions matter, and what should the actor observe in each case?
+- What is the riskiest product or integration assumption, what result would test it, and what evidence would cause us to revise the plan?
+- After that evidence exists, what decision should be made: revise the requirements or approve broader implementation?
 
-**Work packages** → become `{DOMAIN}-{FEATURE}-{UNIT}` nodes, one feature at a time
-- What discrete deliverables make up this feature? (API endpoints, data models, UI components, test suites, migrations — each is typically a work package)
-- Draw boundaries for deep modules: a work package's `outputs` list is its interface. Prefer fewer packages with narrow outputs that hide real functionality; outputs that enumerate internals mean the boundary is drawn wrong — merge or redraw.
-- What inputs does each work package need before it can start?
-- What constraints apply to each work package?
+**Priority and boundaries**
+- Which results are required now, which are later, and which are explicitly out of scope?
+- Are there deadlines, irreversible decisions, migration needs, or compatibility promises that affect sequencing?
+- Which external behavior may still change, and who would be affected if it does?
 
-**Implementation context** → becomes `.wbs/context.md`
-- Tech stack (languages, frameworks, databases, infra)?
-- Definition of Done: what commands must pass before any node is marked complete (test suite, lint, typecheck)? These become `meta.verify` in tree.yaml — run automatically on every `wbs.py done`.
+**Operating constraints and existing context**
+- Are any technologies mandated or prohibited because they affect the product, its users, or operating constraints? Otherwise derive the stack from the repository and confirmed requirements.
+- What existing system, data, workflow, or contract must be preserved or integrated?
 - Hard non-functional constraints: performance targets, security requirements, compliance obligations?
-- External integrations and their contracts?
-- Existing conventions or patterns to follow?
+- What organization-wide quality evidence must pass before any result is accepted (test suite, lint, typecheck, review, or measurement)?
 
-**Stop when** you can fill every field in the schema for every node down to work_package level without uncertainty. If any field would be left blank or vague, ask one more targeted question.
+**Stop when** every required-now result has an actor, trigger, observable success, acceptance evidence, material failure behavior, priority, constraints, and explicitly recorded open assumptions. Technical fields may still require synthesis; do not interrogate the user merely to eliminate implementation uncertainty.
 
-**Contracting point** — before synthesis, present a short summary: what's decided, what's assumed, what's still open. Get an explicit yes. Open questions are not silently resolved by your own recommendations — they go into `## Open Questions` in context.md.
+**Outcome contracting point** — before synthesis, present the outcome-requirement ledger: functionality, observable evidence, priority, constraints, exclusions, and open assumptions. Get explicit confirmation that it represents the requested product. Do not present branches, work packages, tracers, or Proof Slice topology yet.
 
 ---
 
 ## Phase 2: Synthesis
 
-Read `references/node-schema.md` now — it has the full field reference, valid values, and a complete tree.yaml example. Use it throughout synthesis.
+Read `references/intake-to-wbs.md` and `references/node-schema.md` now. The first defines how to compile confirmed outcomes into technical structure; the second defines the output contract.
 
 Do NOT re-interview. Synthesize only from what was established in the grilling session.
 
 1. Check whether `.wbs/tree.yaml` exists. If yes, read it and confirm with the user before proceeding.
 2. Create `.wbs/` directory if it doesn't exist: `mkdir -p .wbs`.
-3. Write `.wbs/tree.yaml` with the complete tree from the grilling session. Include the full `meta` section: `project`, `version: "0.1.0"`, `prd_source: "conversation"`, `tech_stack` (from grilling), `conventions: "See .wbs/context.md"`, `verify` (the Definition-of-Done commands — `wbs.py done` runs them on every completion). Set all node statuses to `pending`. Give every leaf a `verify` entry: one command that runs that node's tests (path per the test-file convention in context.md). The test file won't exist yet — that's the point: `done` refuses until the executor writes tests that pass.
-4. Write `.wbs/context.md` with: tech stack, conventions, core design concepts, design alternatives, architecture notes, integration points, non-functional requirements, open questions. Follow the format in `references/node-schema.md`. This is the file the AI executor loads alongside every leaf node — the alternatives section stops the executor re-litigating settled decisions or implementing a pruned path.
-5. Integrity check: walk the tree and confirm every capability and feature maps to a core design concept, and every work package's outputs read as a narrow interface, not a list of internals. A node that maps to nothing gets cut, merged, or triggers one more grilling question — don't paper over it.
-6. Run `wbs.py validate`. Fix any errors before continuing.
-7. Run `wbs.py status` and show the user the result — total nodes, structure, and what's next.
+3. Compile the confirmed outcome ledger into capabilities, outcome-bearing delivery branches, supporting nodes, work-package leaves, genuine dependencies, and traceability using `references/intake-to-wbs.md`. This is internal reasoning, not a second interview. Inspect the repository to resolve technical structure; record consequential assumptions instead of silently treating them as user requirements.
+4. Write `.wbs/tree.yaml` with the compiled tree. Include the full `meta` section: `project`, `version: "0.1.0"`, `prd_source: "conversation"`, `execution_strategy: proof_slice_first` (the default; use `legacy_bottom_up` only when the user explicitly selects it), `tech_stack` (from confirmed constraints or repository evidence), `conventions: "See .wbs/context.md"`, and `verify` (the Definition-of-Done commands — `wbs.py done` runs them on every completion). Set all node statuses to `pending`. Give every node `source_requirements`; a structural node may instead explain in `notes` which delivery branches it enables. Give every leaf a `verify` entry: one command that runs that node's tests (path per the test-file convention in context.md).
+5. For every outcome-bearing delivery branch, add one explicit tracer leaf derived from its requirement evidence. Confirm its acceptance criteria describe the observable result, its `verify` command runs through real boundaries, and its dependencies cover the interfaces being composed. Internal leaves may be built bottom-up; the tracer is the integration gate.
+6. Map the first architectural proof. If one branch tracer supplies it, rely on normal traversal and omit `proof_slice`. If it crosses delivery branches, add the optional top-level `proof_slice` defined in `references/node-schema.md`: use the minimum dependency-closed set of leaf IDs—including the cross-branch tracer—one end-to-end `verify` command, and status `pending`.
+7. Write `.wbs/context.md` with: outcome requirements, tech stack, conventions, core design concepts, design alternatives, delivery branches and interface maturity, architecture notes, integration points, non-functional requirements, open questions, and—when configured—a concise `## Proof Slice` summary. Follow `references/node-schema.md`.
+8. Integrity check against the compilation invariants in `references/intake-to-wbs.md`. Cut or merge technical structure that maps to no requirement or enabling need; do not invent product scope to justify it.
+9. Present the mapping review defined in `references/intake-to-wbs.md`. Ask the user to confirm functionality coverage, evidence, priorities, assumptions, and scope—not to design the WBS. Incorporate corrections before final validation.
+10. Run `wbs.py validate`. Fix any errors before continuing.
+11. Run `wbs.py status` and show the user the result — total nodes, structure, proof-slice status if present, and what's next.
 
 ### Node ID convention
 
