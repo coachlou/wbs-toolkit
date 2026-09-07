@@ -31,7 +31,7 @@ The system treats software development as a recursive Work Breakdown Structure. 
 2. **What child units fully cover this scope?** (`children`)
 3. **Is this node executable yet?** (is it a leaf? are all dependencies complete?)
 
-The tree is stored in `.wbs/tree.yaml`. `wbs.py` manages tree state — it finds the next executable leaf, records completion, propagates status upward, and validates the schema. The AI agent (Claude Code, Codex, or any coder) reads the leaf context and implements it. An optional top-level `proof_slice` can temporarily restrict execution to one architectural proof that crosses delivery-branch ownership boundaries before ordinary traversal begins.
+The tree is stored in `.wbs/tree.yaml`. `wbs.py` manages tree state — it finds the next executable leaf, records completion, propagates status upward, and validates the schema. The AI agent (Claude Code, Codex, or any coder) reads the leaf context and implements it. The default `proof_slice_first` strategy enforces an optional top-level `proof_slice` when one is declared; that temporary gate is for an architectural proof that crosses delivery-branch ownership boundaries. Without a Proof Slice, ordinary traversal begins immediately.
 
 ### Hierarchy
 
@@ -188,7 +188,10 @@ uv run wbs.py next
 # For deep trees: get the full parent chain for more context
 uv run wbs.py show AUTH-MAGICLINK-API
 
-# Mark done — propagates upward
+# Optionally record active work (recommended for multi-agent coordination)
+uv run wbs.py start AUTH-MAGICLINK-API
+
+# Mark done — runs node and meta.verify checks, then propagates upward
 uv run wbs.py done AUTH-MAGICLINK-API
 
 # Only when done reports awaiting_proof_approval: review, then explicitly approve
@@ -203,7 +206,7 @@ uv run wbs.py next
 
 ### What `next` returns
 
-`next` returns the leaf with the highest priority in a depth-first left-to-right traversal where all dependencies are met:
+`next` returns the first executable leaf in a depth-first left-to-right traversal where all dependencies are met. While an unapproved Proof Slice is active, it considers only that slice's members:
 
 ```json
 {
@@ -211,6 +214,7 @@ uv run wbs.py next
   "type": "work_package",
   "title": "User repository",
   "objective": "Persist and retrieve client accounts by email",
+  "source_requirements": ["REQ-001"],
   "inputs": [],
   "constraints": ["Email must be unique per tenant"],
   "outputs": ["User model", "get_by_email()"],
@@ -221,7 +225,8 @@ uv run wbs.py next
   "dependencies": [],
   "parent_intent": "Secure, passwordless client login with no IT support burden",
   "depth": 2,
-  "context_file": ".wbs/context.md"
+  "context_file": ".wbs/context.md",
+  "execution_strategy": "proof_slice_first"
 }
 ```
 
@@ -346,7 +351,7 @@ uv run wbs.py validate
 uv run wbs.py next
 ```
 
-A decomposed node is not complete — it's a parent waiting for its children. The original node's `status` becomes `decomposed` and its `acceptance_criteria` transfers to its children (or you refine them).
+A decomposed node is not complete — it's a parent waiting for its children. The original node's `status` becomes `decomposed`; `wbs.py` does not copy its acceptance criteria, so the editor must distribute or refine them on the new children before validating.
 
 The system is genuinely recursive: any node at any level can be decomposed at any time. A work package can become a feature. A feature can grow sub-features. The loop is always the same.
 
@@ -378,7 +383,7 @@ uv run wbs.py show AUTH-MAGICLINK-API
 
 ### `done <id>`
 
-Marks a node complete and propagates upward.
+Runs the node's `verify` commands and the optional project-wide `meta.verify` commands, then marks a node complete and propagates upward. It refuses incomplete dependencies or children, failed verification, and nodes outside an active Proof Slice.
 
 ```bash
 uv run wbs.py done AUTH-MAGICLINK-API
@@ -461,7 +466,7 @@ Run `validate` after any manual edit to `tree.yaml`.
 
 ### `init <prd.md>`
 
-Scaffolds a skeleton `tree.yaml` and `context.md` from an existing PRD file. Intended for when you have a written PRD and want to start the tree structure. The `wbs-prd` skill is the preferred way to generate the tree from scratch via conversation.
+Scaffolds a skeleton `tree.yaml` and `context.md` from an existing PRD file, and copies the toolkit's bundled schema to `node-template.yaml`. The skeleton sets `meta.execution_strategy: proof_slice_first` and adds the outcome-ledger sections, but is intentionally incomplete. The `wbs-prd` skill is the preferred way to generate the tree from scratch via conversation.
 
 ```bash
 uv run wbs.py init docs/prd.md
@@ -486,12 +491,20 @@ uv run wbs.py init docs/prd.md
 | All `dependencies[].id` values resolve to existing nodes | All nodes |
 | `dependencies[].type` is one of: `data`, `sequence`, `runtime` | All nodes |
 | `acceptance_criteria` list is non-empty | Leaf nodes (not `decomposed`) |
+| `acceptance_criteria` and verification entries contain only non-empty strings | Wherever present |
+| Every executable leaf has commands in its own `verify` or project-wide `meta.verify` | Leaf nodes (not `decomposed`) |
 | No dependency cycles (including a node depending on its own ancestor) | Whole tree |
 | Proof Slice fields, status, and commands are present and valid | Optional `proof_slice` |
 | Proof members exist, are unique leaves, and include every unresolved dependency | Optional `proof_slice` |
 | A `verified` or `approved` proof has no incomplete members | Optional `proof_slice` |
 
 All read and state-management commands except `init` and `validate` refuse an invalid tree. Fix validation errors before executing.
+
+### Trust and concurrency boundary
+
+Verification entries run as shell commands in the directory where `wbs.py` is invoked. Treat `.wbs/tree.yaml` as executable project configuration: review commands supplied by generators, collaborators, or external sources before running `done` or `approve-proof`, and invoke the CLI from the project root.
+
+Tree replacement is atomic, so interruption cannot leave a partially written YAML document. It is still a single-writer state store: parallel implementation is safe only when one controller serializes all WBS state-changing commands. `start` records coordination state; it is not a distributed lease or lock.
 
 ---
 

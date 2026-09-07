@@ -12,6 +12,7 @@ WBS = Path(__file__).resolve().parents[1] / "wbs.py"
 
 
 def leaf(node_id, *, dependencies=None, status="pending", verify=None):
+    verify = ["true"] if verify is None else verify
     return {
         "id": node_id,
         "type": "work_package",
@@ -19,7 +20,7 @@ def leaf(node_id, *, dependencies=None, status="pending", verify=None):
         "objective": f"Deliver {node_id}",
         "status": status,
         "acceptance_criteria": [f"{node_id} works"],
-        "verify": verify or [],
+        "verify": verify,
         "dependencies": dependencies or [],
         "children": [],
     }
@@ -93,6 +94,7 @@ class WbsCliTest(unittest.TestCase):
         self.assertEqual(
             self.read_tree()["meta"]["execution_strategy"], "proof_slice_first"
         )
+        self.assertTrue((Path(self.temp_dir.name) / "node-template.yaml").exists())
 
     def test_legacy_tree_keeps_depth_first_selection(self):
         self.write_tree(tree_with([leaf("FIRST"), leaf("SECOND")]))
@@ -179,6 +181,15 @@ class WbsCliTest(unittest.TestCase):
                 self.assertIn("tree validation failed", result.stderr)
                 self.assertIn("acceptance_criteria", result.stderr)
 
+    def test_invalid_yaml_reports_a_bounded_cli_error(self):
+        self.tree_path.write_text("tree: [unterminated\n")
+
+        result = self.run_wbs("validate")
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("contains invalid YAML", result.stderr)
+        self.assertNotIn("Traceback", result.stderr)
+
     def test_source_requirements_must_be_string_ids_when_present(self):
         invalid = tree_with([leaf("FIRST")])
         invalid["tree"]["children"][0]["source_requirements"] = ["REQ-001", 2]
@@ -188,6 +199,54 @@ class WbsCliTest(unittest.TestCase):
 
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("source_requirements", result.stdout)
+
+    def test_leaf_requires_node_or_project_verification(self):
+        data = tree_with([leaf("FIRST", verify=[])])
+        self.write_tree(data)
+
+        result = self.run_wbs("validate")
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("leaf has no verification commands", result.stdout)
+
+    def test_project_verification_can_supply_leaf_gate(self):
+        data = tree_with([leaf("FIRST", verify=[])], meta_verify=["true"])
+        self.write_tree(data)
+
+        result = self.run_wbs("validate")
+
+        self.assert_success_json(result)
+
+    def test_verification_fields_must_be_lists_of_non_empty_strings(self):
+        cases = [
+            ("node", tree_with([leaf("FIRST", verify="true")]), "FIRST: 'verify'"),
+            ("meta", tree_with([leaf("FIRST")], meta_verify={"cmd": "true"}), "meta.verify"),
+            (
+                "proof",
+                tree_with(
+                    [leaf("FIRST")],
+                    proof_slice=proof(["FIRST"], verify=[1]),
+                ),
+                "proof_slice.verify",
+            ),
+        ]
+
+        for name, data, expected in cases:
+            with self.subTest(name=name):
+                self.write_tree(data)
+                result = self.run_wbs("validate")
+                self.assertNotEqual(result.returncode, 0)
+                self.assertIn(expected, result.stdout)
+
+    def test_acceptance_criteria_must_be_non_empty_strings(self):
+        data = tree_with([leaf("FIRST")])
+        data["tree"]["children"][0]["acceptance_criteria"] = [""]
+        self.write_tree(data)
+
+        result = self.run_wbs("validate")
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("acceptance_criteria", result.stdout)
 
     def test_next_preserves_requirement_traceability(self):
         first = leaf("FIRST")

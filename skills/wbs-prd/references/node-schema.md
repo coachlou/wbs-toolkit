@@ -45,7 +45,7 @@ acceptance_criteria: # List of strings: verifiable conditions that prove this no
   - string           # Must be testable without asking the author. At least one per node.
 
 verify:              # Shell commands `wbs.py done` runs — all must exit 0 or completion is refused
-  - string           # One per leaf: the command that runs this node's tests
+  - string           # One per leaf unless non-empty meta.verify supplies its effective gate
 
 dependencies:        # Nodes that must reach 'complete' before this node is executable
   - id: string       # Must match an id that exists elsewhere in the tree
@@ -87,6 +87,9 @@ meta:
   verify:              # Definition of Done — run by `wbs.py done` on EVERY completion
     - pytest -q
     - ruff check .
+
+# Every executable leaf must have at least one effective verification command:
+# its own non-empty verify list or this non-empty meta.verify list.
 
 tree:
   id: ROOT

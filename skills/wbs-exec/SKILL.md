@@ -8,6 +8,8 @@ description: >-
 
 - `--tree` is a global flag: `wbs.py --tree path/tree.yaml next`, not after the subcommand.
 - `wbs.py done` runs the node's `verify` commands AND `meta.verify` (project-wide gate). If it refuses, fix the code — never weaken or delete a verify command. Correcting a verify entry's *path* to where the tests actually live is fine; changing what it checks is not.
+- Treat every `verify` entry as executable project code. Review commands from external or generated trees before running them, and invoke `wbs.py` from the project root.
+- `.wbs/tree.yaml` is a single-writer state store. Parallel implementation agents must route all state-changing WBS commands through one controller; `start` is coordination state, not a distributed lease.
 - Spec-time `verify` entries reference test files that don't exist yet. That's the gate working: write the tests, then `done`.
 - context.md's `## Design Alternatives` lists pruned paths. Do not re-litigate or implement them, even if one looks better mid-implementation — if you genuinely hit a wall, `block` the node with the reason instead.
 - If an acceptance criterion cannot be turned into a test, do NOT guess or skip it: `wbs.py block <id> --reason "untestable AC: ..."` and tell the user. Ambiguity caught before code is a spec fix; caught after, it's rework.

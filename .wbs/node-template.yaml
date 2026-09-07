@@ -79,8 +79,9 @@ acceptance_criteria:
   - "Token stored in Redis with 15-minute TTL"
   - "Second request within rate-limit window returns 429"
 
-verify:                                 # Optional. Shell commands run by 'wbs.py done' —
-  - "pytest tests/auth -q"              # all must exit 0 or 'done' refuses to mark complete.
+verify:                                 # Shell commands run by 'wbs.py done' —
+  - "pytest tests/auth -q"              # all must exit 0 or 'done' refuses completion.
+                                        # May be empty only when meta.verify is non-empty.
 
 dependencies:
   - id: "AUTH-USER-REPO"               # Must match an id that exists elsewhere in the tree
@@ -110,6 +111,8 @@ children: []                            # Empty = leaf node.
 #     - "PostgreSQL"
 #     - "Redis"
 #   conventions: "See .wbs/context.md"
+#   verify:
+#     - "pytest -q"
 #
 # tree:
 #   id: ROOT

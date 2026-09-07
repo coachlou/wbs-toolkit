@@ -22,14 +22,18 @@ Commands:
 Options:
   --tree PATH           Path to tree.yaml [default: .wbs/tree.yaml]
 
-All commands emit JSON to stdout. Errors go to stderr with non-zero exit.
+Successful commands emit JSON to stdout. Validation reports always use stdout;
+operational errors use stderr. Failures exit non-zero.
 Run with: python wbs.py <command> or uv run wbs.py <command>
 """
 
 import argparse
 import json
+import os
+import shutil
 import subprocess
 import sys
+import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
@@ -37,6 +41,8 @@ from typing import Optional
 import yaml
 
 DEFAULT_TREE = Path(".wbs/tree.yaml")
+TOOL_ROOT = Path(__file__).resolve().parent
+DEFAULT_NODE_TEMPLATE = TOOL_ROOT / ".wbs/node-template.yaml"
 
 VALID_TYPES = {
     "product",
@@ -77,18 +83,39 @@ REQUIRED_PROOF_FIELDS = (
 def load_tree(path: Path) -> dict:
     if not path.exists():
         sys.exit(f"Error: {path} not found. Run 'wbs.py init <prd.md>' first.")
-    with open(path) as f:
-        data = yaml.safe_load(f)
+    try:
+        with open(path) as f:
+            data = yaml.safe_load(f)
+    except yaml.YAMLError as exc:
+        sys.exit(f"Error: {path} contains invalid YAML: {exc}")
     if not isinstance(data, dict) or "tree" not in data:
         sys.exit(f"Error: {path} must contain a 'tree' key at the top level.")
     return data
 
 
 def save_tree(data: dict, path: Path) -> None:
-    with open(path, "w") as f:
-        yaml.dump(
-            data, f, default_flow_style=False, sort_keys=False, allow_unicode=True
-        )
+    """Atomically replace the tree so an interrupted write cannot truncate it."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temp_path = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            "w",
+            dir=path.parent,
+            prefix=f".{path.name}.",
+            suffix=".tmp",
+            delete=False,
+        ) as f:
+            temp_path = Path(f.name)
+            yaml.dump(
+                data, f, default_flow_style=False, sort_keys=False, allow_unicode=True
+            )
+            f.flush()
+            os.fsync(f.fileno())
+        os.chmod(temp_path, path.stat().st_mode & 0o777 if path.exists() else 0o644)
+        os.replace(temp_path, path)
+    finally:
+        if temp_path is not None and temp_path.exists():
+            temp_path.unlink()
 
 
 # ── Node index ────────────────────────────────────────────────────────────────
@@ -178,6 +205,22 @@ def validate_tree_data(tree_data: dict) -> tuple[list[str], dict]:
     else:
         meta = tree_data["meta"]
 
+    def validate_string_list(value, label, *, required=False) -> bool:
+        if not isinstance(value, list):
+            errors.append(f"{label}: must be a list of non-empty strings")
+            return False
+        if any(not isinstance(item, str) or not item.strip() for item in value):
+            errors.append(f"{label}: every item must be a non-empty string")
+            return False
+        if required and not value:
+            errors.append(f"{label}: must contain at least one item")
+            return False
+        return True
+
+    meta_verify = meta.get("verify", [])
+    meta_verify_valid = validate_string_list(meta_verify, "meta.verify")
+    has_meta_verify = meta_verify_valid and bool(meta_verify)
+
     configured_strategy = meta.get("execution_strategy")
     if (
         configured_strategy is not None
@@ -240,10 +283,28 @@ def validate_tree_data(tree_data: dict) -> tuple[list[str], dict]:
             children = []
 
         if not children and node.get("status") != "decomposed":
-            if not node.get("acceptance_criteria"):
+            validate_string_list(
+                node.get("acceptance_criteria"),
+                f"{label}: 'acceptance_criteria'",
+                required=True,
+            )
+
+            node_verify = node.get("verify", [])
+            node_verify_valid = validate_string_list(
+                node_verify, f"{label}: 'verify'"
+            )
+            if node_verify_valid and not node_verify and not has_meta_verify:
                 errors.append(
-                    f"{label}: leaf node missing 'acceptance_criteria' — add at least one verifiable condition"
+                    f"{label}: leaf has no verification commands — add node 'verify' or meta.verify"
                 )
+        elif "acceptance_criteria" in node:
+            validate_string_list(
+                node.get("acceptance_criteria"),
+                f"{label}: 'acceptance_criteria'",
+            )
+
+        if children and "verify" in node:
+            validate_string_list(node.get("verify"), f"{label}: 'verify'")
 
         dependencies = node.get("dependencies") or []
         if not isinstance(dependencies, list):
@@ -346,12 +407,14 @@ def validate_tree_data(tree_data: dict) -> tuple[list[str], dict]:
             if len(proof_nodes) != len(set(proof_nodes)):
                 errors.append("proof_slice: 'nodes' contains duplicate IDs")
 
-            if not isinstance(proof.get("acceptance_criteria"), list) or not proof.get(
-                "acceptance_criteria"
-            ):
-                errors.append("proof_slice: 'acceptance_criteria' must be a non-empty list")
-            if not isinstance(proof.get("verify"), list) or not proof.get("verify"):
-                errors.append("proof_slice: 'verify' must be a non-empty list")
+            validate_string_list(
+                proof.get("acceptance_criteria"),
+                "proof_slice.acceptance_criteria",
+                required=True,
+            )
+            validate_string_list(
+                proof.get("verify"), "proof_slice.verify", required=True
+            )
 
             proof_set = set(proof_nodes)
             for proof_node_id in proof_nodes:
@@ -847,6 +910,15 @@ def cmd_init(args):
     if args.tree.exists():
         sys.exit(f"Error: {args.tree} already exists. Delete it to reinitialize.")
 
+    template_path = wbs_dir / "node-template.yaml"
+    if not template_path.exists():
+        if not DEFAULT_NODE_TEMPLATE.exists():
+            sys.exit(
+                "Error: node template is missing from the WBS toolkit at "
+                f"'{DEFAULT_NODE_TEMPLATE}'. Reinstall the complete toolkit distribution."
+            )
+        shutil.copyfile(DEFAULT_NODE_TEMPLATE, template_path)
+
     skeleton = {
         "meta": {
             "project": prd_path.stem,
@@ -894,7 +966,7 @@ def cmd_init(args):
             {
                 "initialized": str(args.tree),
                 "context_file": str(context_path),
-                "schema_template": str(wbs_dir / "node-template.yaml"),
+                "schema_template": str(template_path),
                 "next_step": "Run the PRD skill/agent to populate tree.yaml, or edit it manually using .wbs/node-template.yaml as the schema reference.",
                 "note": "Skeleton will not pass 'wbs.py validate' until fully populated — that is expected.",
             },
@@ -911,7 +983,10 @@ def main():
         prog="wbs.py",
         description="WBS — Recursive Work Breakdown Structure manager for AI-driven development.",
         formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog="All output is JSON. Errors go to stderr with non-zero exit.",
+        epilog=(
+            "Successful output is JSON. Validation reports use stdout; "
+            "operational errors use stderr."
+        ),
     )
     parser.add_argument(
         "--tree",

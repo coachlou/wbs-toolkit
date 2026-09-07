@@ -2,7 +2,7 @@
 
 A recursive Work Breakdown Structure (WBS) system for AI-driven software development.
 
-Every node in the tree — from the top-level product down to a single work package — uses the same self-similar schema. Development becomes a depth-first, bottom-up traversal of that tree, with each leaf executed by an AI agent (Claude Code, Codex, or any AI coder). An optional Proof Slice Gate can first verify one end-to-end journey that crosses delivery-branch ownership boundaries before ordinary traversal resumes.
+Every node in the tree — from the top-level product down to a single work package — uses the same self-similar schema. Leaves execute in dependency-aware, depth-first order. In the default `proof_slice_first` strategy, a declared cross-branch Proof Slice is verified and explicitly approved before ordinary traversal resumes; without one, execution follows the same normal traversal. Each leaf can be executed by Claude Code, Codex, or another AI coder.
 
 ---
 
@@ -20,12 +20,23 @@ The recursion stops when a node is small enough for a single AI agent session. T
 
 ## Installation
 
+Keep the extracted toolkit directory intact: `wbs.py` uses its bundled `.wbs/node-template.yaml` when initializing another project.
+
 **Skills:** Copy `skills/wbs-prd/` and `skills/wbs-exec/` to `~/.claude/skills/`, or symlink:
 
 ```bash
 ln -s /path/to/recursive-development/skills/wbs-prd ~/.claude/skills/
 ln -s /path/to/recursive-development/skills/wbs-exec ~/.claude/skills/
 ```
+
+**Per project:** either copy `wbs.py` and `.wbs/node-template.yaml` into the target project, or invoke the toolkit copy from the target project root:
+
+```bash
+cd /path/to/your-project
+uv run /path/to/recursive-development/wbs.py init docs/prd.md
+```
+
+`init` creates `.wbs/tree.yaml`, `.wbs/context.md`, and copies the bundled schema to `.wbs/node-template.yaml`. If the PRD skill creates the tree directly, keep `wbs.py` available at the project root or provide its explicit toolkit path.
 
 ## Quick start
 
@@ -35,22 +46,26 @@ ln -s /path/to/recursive-development/skills/wbs-exec ~/.claude/skills/
 # 1. Spec a project via the wbs-prd Claude Code skill
 /wbs-prd          # interviews you, writes .wbs/tree.yaml + .wbs/context.md
 
-# 2. Get the next executable leaf
-uv run wbs.py next
+# 2. Inspect the effective strategy (proof_slice_first is the default)
+uv run wbs.py strategy
 
 # Optional compatibility mode: persist legacy unrestricted DFS
 uv run wbs.py strategy legacy_bottom_up
 
-# 3. Implement the leaf (AI reads the JSON output and acts)
+# 3. Get the next executable leaf
+uv run wbs.py next
 
-# 4. Mark it done — runs the node's verify commands + tree.yaml's meta.verify
+# 4. Implement the leaf (AI reads the JSON output and acts)
+uv run wbs.py start <node-id> # optional, records in_progress
+
+# 5. Mark it done — runs the node's verify commands + tree.yaml's meta.verify
 #    (project-wide gate: full test suite, lint, typecheck), then propagates upward
 uv run wbs.py done <node-id>
 
-# 5. If the final Proof Slice leaf completed, review the evidence and explicitly approve
+# Only if done returns awaiting_proof_approval: review evidence, then explicitly approve
 uv run wbs.py approve-proof
 
-# 6. Repeat — after approval, normal depth-first traversal resumes
+# 6. Repeat — after approval, or immediately for ordinary trees
 uv run wbs.py next
 ```
 
@@ -59,7 +74,7 @@ uv run wbs.py next
 If a leaf is too large for one session:
 ```bash
 uv run wbs.py decompose <node-id>
-# Edit .wbs/tree.yaml to add children under that node
+# Edit .wbs/tree.yaml to add children under that node and distribute/refine its criteria
 uv run wbs.py validate
 uv run wbs.py next   # now returns one of the children
 ```
@@ -72,15 +87,15 @@ uv run wbs.py next   # now returns one of the children
 
 | Command | Description |
 |---|---|
-| `wbs.py next` | Next executable leaf as JSON — respects dependency order |
+| `wbs.py next` | Next executable leaf as JSON — respects dependencies and an active Proof Slice |
 | `wbs.py show <id>` | Full node + parent chain as JSON — load into agent context |
-| `wbs.py done <id>` | Mark complete; propagates status up the tree |
+| `wbs.py done <id>` | Run node and project verification, then mark complete and propagate status |
 | `wbs.py start <id>` | Mark `in_progress` |
 | `wbs.py block <id> [--reason "..."]` | Mark `blocked` |
 | `wbs.py decompose <id>` | Mark for re-expansion; edit tree, then validate |
 | `wbs.py strategy [name]` | Show or persist `proof_slice_first` / `legacy_bottom_up` |
-| `wbs.py approve-proof` | Re-verify and approve a completed Proof Slice, unlocking ordinary traversal |
-| `wbs.py status` | Progress dashboard (total nodes, % complete, next leaf) |
+| `wbs.py approve-proof` | Re-verify and approve a verified Proof Slice, unlocking ordinary traversal |
+| `wbs.py status` | Progress dashboard, including strategy and Proof Slice gate state |
 | `wbs.py validate` | Schema + integrity check — run after any manual tree edit |
 | `wbs.py init <prd.md>` | Scaffold a skeleton `.wbs/tree.yaml` from a PRD file |
 
@@ -137,7 +152,13 @@ The skill interviews you about actors, behavior, observable results, evidence, f
 
 ## Output contract
 
-All `wbs.py` commands emit JSON to stdout. Errors go to stderr with a non-zero exit code. This makes every command scriptable and AI-readable.
+Successful `wbs.py` commands emit JSON to stdout. Operational errors go to stderr with a non-zero exit code; `validate` emits its JSON validation report to stdout and exits non-zero when invalid. This makes every result scriptable and AI-readable.
+
+### Trust and concurrency boundary
+
+`verify` entries are shell commands. Run WBS trees only from trusted projects, and review generated or externally supplied verification commands before calling `done` or `approve-proof`.
+
+The tree file has atomic replacement protection but is a single-writer state store. Parallel agents may implement independent leaves, but one controller must serialize `start`, `block`, `decompose`, `strategy`, `done`, and `approve-proof` mutations.
 
 Example `next` output:
 ```json
@@ -146,6 +167,7 @@ Example `next` output:
   "type": "work_package",
   "title": "Magic-link request endpoint",
   "objective": "Accept an email and issue a short-lived signed login token",
+  "source_requirements": ["REQ-001"],
   "inputs": ["User model (AUTH-USER-REPO)"],
   "constraints": ["Stateless API", "Token expiry: 15 minutes"],
   "outputs": ["POST /auth/magic-link", "Token stored in Redis"],
@@ -153,6 +175,7 @@ Example `next` output:
   "dependencies": [{"id": "AUTH-USER-REPO", "type": "data"}],
   "parent_intent": "Secure, passwordless client login with no IT support burden",
   "depth": 2,
-  "context_file": ".wbs/context.md"
+  "context_file": ".wbs/context.md",
+  "execution_strategy": "proof_slice_first"
 }
 ```
