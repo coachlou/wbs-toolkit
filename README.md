@@ -45,6 +45,13 @@ The repository also ships a portable `distro/` source package for the
 `wbs-toolkit`, install it into a project with the ambient-folder installer:
 
 ```bash
+curl -fsSL https://raw.githubusercontent.com/coachlou/ambient-library/main/library/ambient-folder/bootstrap.sh \
+  | bash -s -- wbs-toolkit /path/to/project
+```
+
+Or, if you have the ambient-library checked out locally:
+
+```bash
 bash "${CLAUDE_PLUGIN_ROOT}/library/ambient-folder/install.sh" \
   wbs-toolkit --check /path/to/project
 bash "${CLAUDE_PLUGIN_ROOT}/library/ambient-folder/install.sh" \
