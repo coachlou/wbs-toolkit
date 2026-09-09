@@ -21,6 +21,18 @@ server, retain API credentials, or create a second application runtime.
 
 ## Install — make a project a WBS workspace
 
+**Installing for a non-technical owner?** Read `INSTALL.md` next to this file and follow it
+instead of this section. It is a step-by-step runbook covering both macOS and Windows (WSL2),
+with dependency detection, copy/paste blocks written for a beginner, and remediation for
+every known failure. This section assumes the prerequisites are already in place; `INSTALL.md`
+does not.
+
+Without the library plugin (member one-liner, same result):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/coachlou/ambient-library/main/library/ambient-folder/bootstrap.sh | bash -s -- wbs-toolkit <target-project>
+```
+
 With the ambient library plugin installed:
 
 ```bash

@@ -21,6 +21,11 @@ snapshot with the existing CLI, schema, skills, and recipient documentation;
 `.aai/` templates remain owned by the installed project, while `.ailib/` is
 the refreshable copy.
 
+`docs/INSTALL.md` — the non-technical Mac/Windows install runbook — is
+dev-workspace source, not distro source. `distro/INSTALL.md` is a build
+artifact copied from it; run `scripts/build_distro_docs.sh` after editing
+`docs/INSTALL.md` and before syncing to the ambient library.
+
 ## Preconditions
 
 1. Choose and add `LICENSE.md`. The builder refuses to create an externally distributable artifact without it.
@@ -36,6 +41,7 @@ From the repository root:
 PYTHONDONTWRITEBYTECODE=1 python3 -m unittest -v \
   tests.test_wbs tests.test_scheduler_benchmark tests.test_release_builder
 ruff check --no-cache wbs.py scripts/build_release.py tests
+scripts/build_distro_docs.sh
 python3 scripts/build_release.py --ref v0.2.1
 ```
 
