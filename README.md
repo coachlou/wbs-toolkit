@@ -18,6 +18,12 @@ The recursion stops when a node is small enough for a single AI agent session. T
 
 ---
 
+## Method lineage
+
+The method descends from test-driven, specification-first practice: the outcome-requirement ledger plays the role of EARS-style acceptance criteria, per-leaf execution is the red-green loop with a verification gate, `*-E2E` tracer leaves are vertical slices, and the Proof Slice is a walking skeleton gated by human approval. The full concept mapping — and the deliberate divergences, such as allowing bottom-up construction inside a branch — is in [Method lineage](docs/method-lineage.md).
+
+---
+
 ## Installation
 
 Keep the extracted toolkit directory intact: `wbs.py` uses its bundled `.wbs/node-template.yaml` when initializing another project.

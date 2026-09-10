@@ -2,7 +2,7 @@
 
 > The parent defines intent. The children define composition. The leaves define execution.
 
-The normative intake and synthesis boundary is defined in the [Outcome-Driven WBS Specification](outcome-driven-specification.md).
+The normative intake and synthesis boundary is defined in the [Outcome-Driven WBS Specification](outcome-driven-specification.md). How the method maps onto classic TDD, EARS, and walking-skeleton practice is summarized in the [Method lineage](method-lineage.md) note.
 
 ---
 

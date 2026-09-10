@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Docs
+
+- Add `docs/method-lineage.md`: the concept mapping between the outcome-driven WBS method and classic TDD / EARS / walking-skeleton practice, and the deliberate divergences. Linked from the README and user guide; included in the deterministic distro and the ambient-library `app/docs/` snapshot.
+
 ## 0.2.1 - 2026-09-07
 
 ### Fixed

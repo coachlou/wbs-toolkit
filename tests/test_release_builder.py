@@ -101,6 +101,7 @@ def selectable_required_files():
         "LICENSE.md",
         "README.md",
         "VERSION",
+        "docs/method-lineage.md",
         "docs/outcome-driven-specification.md",
         "docs/user-guide.md",
         "tests/test_wbs.py",
