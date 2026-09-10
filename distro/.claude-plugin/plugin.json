@@ -1,7 +1,7 @@
 {
   "name": "wbs-toolkit",
   "description": "Installs and operates the outcome-driven WBS toolkit as a folder's agentic planning and verified execution function; use for \"set up WBS here\", \"spec this project\", \"run the WBS\", or \"update the WBS toolkit\".",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "author": {
     "name": "Lou D'Alo"
   },
