@@ -20,6 +20,7 @@ description: >-
 - Never run `wbs.py approve-proof` without the user's explicit approval. Verification supplies evidence; it does not authorize broader implementation.
 - Never change `wbs.py strategy` without explicit user direction. `proof_slice_first` is the default; `legacy_bottom_up` deliberately ignores an unapproved Proof Slice and changes project execution policy.
 - Treat a leaf as the execution unit and its outcome-bearing feature ancestor as the delivery unit. A leaf suffixed `-E2E` is the branch tracer: exercise the composed branch through its declared entry and result boundaries, not merely by importing components together.
+- Design rules are not optional style: `references/module-design.md` defines deep-module and separation-of-concerns constraints, and context.md `## Module Boundaries` names each concern's owner. Put new behavior in the owning module, expose only the leaf's `outputs`, and never add a pass-through wrapper, caller-side option, or private-name import to make a test pass faster.
 - Interfaces listed as provisional in context.md remain revisable until their tracer passes. When the tracer establishes a different contract, update affected branch consumers and their tests coherently, record the learning, and report the rework; do not preserve the provisional shape with an unrequested compatibility layer.
 
 ## The loop
@@ -28,8 +29,8 @@ Repeat until `next` returns `no_executable_leaves` or the user stops you:
 
 1. **Load** — `wbs.py next`. Confirm its `execution_strategy`, then read `context_file` (always). For nodes at depth ≥ 3, run `wbs.py show <id>` for the full ancestry — `next` only gives the immediate parent's intent. If the result is `proof_slice_blocked`, report its named blockers; if it is `awaiting_proof_approval`, follow the Proof Slice checkpoint below. Otherwise run `wbs.py start <id>`.
 2. **Tests first** — translate every `acceptance_criteria` item into a failing test before writing any implementation. One test per criterion, minimum; add edge cases the criteria imply. Put them where context.md's test-file convention says — matching the node's `verify` command path. Run them; confirm they fail for the right reason.
-3. **Implement** — the minimum code that turns the tests green, honoring the node's `constraints` and context.md conventions. `outputs` is the node's interface: build exactly that surface, hide everything else.
-4. **Gate** — run the full Definition-of-Done commands from context.md (suite, lint, typecheck) yourself before calling done, so failures surface with full output in your session rather than truncated in the done error.
+3. **Implement** — the minimum code that turns the tests green, honoring the node's `constraints`, context.md conventions, and `## Module Boundaries`. `outputs` is the node's interface: build exactly that surface inside the owning module, hide everything else. Minimum code is never a shallow wrapper or a leaked internal; follow `references/module-design.md`.
+4. **Gate** — run the full Definition-of-Done commands from context.md (suite, lint, typecheck) yourself before calling done, so failures surface with full output in your session rather than truncated in the done error. Then walk the executor checks in `references/module-design.md` against your diff.
 5. **Close** — `wbs.py done <id>`. If it refuses, fix and retry. Then report: node ID, what was built, test count, anything learned that belongs in context.md's `## Learnings`.
 
 Use the leaf's `source_requirements` to check its implementation and tests against the corresponding outcome ledger entries in context.md. If the technical leaf conflicts with the confirmed actor, result, evidence, failure behavior, or constraint, block and propose a specification correction rather than silently following the lower-level representation.
@@ -51,8 +52,8 @@ Ask the user to approve the proof only after that review. On explicit approval, 
 
 ## Capability checkpoint
 
-When `done` propagates completion to a `CAP-*` node, pause before the next leaf and run an integrity pass over that capability's code: does every module map to a `## Core Design Concepts` entry in context.md? Do the interfaces match the declared `outputs`? Report drift to the user — with a proposed fix — before continuing. This is the one review point; don't review per leaf.
+When `done` propagates completion to a `CAP-*` node, pause before the next leaf and run an integrity pass over that capability's code: does every module map to a `## Core Design Concepts` entry and a `## Module Boundaries` owner in context.md? Do the interfaces match the declared `outputs`? Scan for the red flags in `references/module-design.md` — shallow modules, pass-throughs, leaked internals, split concerns, logic in entry points. Report drift to the user — with a proposed fix — before continuing. This is the one architectural review point; per-leaf design checks stay limited to the changed code.
 
 ## Co-evolution
 
-Implementation teaches things the spec couldn't know. When a node reveals a wrong assumption, a missing dependency, or a problem reframing: append a dated entry to context.md `## Learnings`, and if the tree itself is wrong (missing node, wrong boundary), propose the tree edit to the user — don't silently restructure. After manual tree edits, always `wbs.py validate`.
+Implementation teaches things the spec couldn't know. When a node reveals a wrong assumption, a missing dependency, or a problem reframing: append a dated entry to context.md `## Learnings`, and if the tree or module map is wrong (missing node, wrong boundary, a concern with no owner or two owners), propose the tree edit to the user — don't silently restructure. After manual tree edits, always `wbs.py validate`.

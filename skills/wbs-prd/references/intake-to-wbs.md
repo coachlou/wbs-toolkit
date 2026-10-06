@@ -37,7 +37,8 @@ After the user confirms the outcome ledger:
 5. For each outcome-bearing branch, derive one ordinary `*-E2E` tracer leaf from the requirement's actor, trigger, result, failure behavior, and evidence. Its dependencies are the genuine branch interfaces required for that journey.
 6. Mark exposed interfaces as provisional in context.md until their tracer passes. List known consumers so contract reconciliation is visible rather than hidden.
 7. Select the smallest architectural proof from the highest-risk or highest-learning-value required outcome. If one branch tracer supplies it, use ordinary depth-first traversal. If it crosses delivery-branch ownership boundaries, compile the minimum dependency-closed leaves and tracer into `proof_slice`.
-8. Keep dependency edges factual: data, sequence, or runtime prerequisites only. Never encode product priority or proof selection as fake dependencies.
+8. Assign every concern—domain concept, external system, data store, policy—exactly one owning module in context.md `## Module Boundaries`, following `../../wbs-exec/references/module-design.md`. Draw boundaries around design decisions likely to change, not around execution steps. Place each leaf inside its owning module and state its `outputs` as the narrow public surface it adds there.
+9. Keep dependency edges factual: data, sequence, or runtime prerequisites only. Never encode product priority or proof selection as fake dependencies.
 
 ## Compilation invariants
 
@@ -46,6 +47,7 @@ After the user confirms the outcome ledger:
 - Every outcome-bearing delivery branch has exactly one primary tracer leaf. Additional scenario tests may exist, but one leaf owns the branch integration gate.
 - Every tracer runs through the declared trigger-to-result boundary and covers material failure behavior; importing modules together is not sufficient.
 - A tracer depends on every unresolved interface it composes, but not on unrelated documentation, administration, or future enhancement work.
+- Every concern has exactly one owning module; every leaf's `outputs` lands in a module listed in `## Module Boundaries`. No module exists only to forward calls.
 - A Proof Slice references existing leaves and never changes their parentage.
 - Open product questions remain open. Technical assumptions are recorded and surfaced; they are not presented as user decisions.
 

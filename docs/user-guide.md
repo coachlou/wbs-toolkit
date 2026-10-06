@@ -530,6 +530,12 @@ Tree replacement is atomic, so interruption cannot leave a partially written YAM
 - Tests: pytest + httpx; no DB mocks — use test database
 - Errors: RFC 9457 Problem Details format
 
+## Module Boundaries
+| Module | Owns (single concern) | Public interface | Hides |
+|---|---|---|---|
+| backend/auth/tokens.py | Magic-link token lifecycle | issue(email), redeem(raw) | Hashing, TTL storage, single-use enforcement |
+| backend/api/ | HTTP adaptation only | Route handlers | Nothing domain-specific |
+
 ## Delivery Branches
 - AUTH-MAGICLINK → REQ-001
 - Tracer: AUTH-MAGICLINK-E2E
@@ -545,6 +551,8 @@ Tree replacement is atomic, so interruption cannot leave a partially written YAM
 - SOC 2 Type II: PII encrypted at rest, audit log for auth events
 ```
 
+`## Module Boundaries` is the module map executors enforce: each concern has one owning module with a narrow public interface that hides its design decisions. The rules behind it — deep modules, separation of concerns, and the red flags executors treat as defects — live in `skills/wbs-exec/references/module-design.md`, so every project that vendors the skills inherits them.
+
 Keep it dense and factual. The outcome ledger contains confirmed user requirements; delivery branches and architecture sections are the PRD writer's derived representation. Do not rewrite technical assumptions as if the user supplied them. The AI reads this file cold before implementing each leaf.
 
 ---
@@ -554,6 +562,8 @@ Keep it dense and factual. The outcome ledger contains confirmed user requiremen
 When using `wbs.py` as part of an agentic loop:
 
 **Always read `context_file` before implementing.** The leaf node JSON includes a `context_file` path. Load it. It has the tech stack and conventions that determine how to implement the node correctly.
+
+**Build inside the owning module.** Put a leaf's behavior in the module `## Module Boundaries` assigns to its concern, expose only the leaf's `outputs`, and keep entry points thin. Shallow wrappers, pass-through layers, and private-name imports are defects, not shortcuts.
 
 **Use `show <id>` for full ancestry.** `next` returns only the immediate parent's intent. For nodes deep in the tree, `show` gives you the full chain from ROOT to leaf — useful for understanding *why* a node exists.
 

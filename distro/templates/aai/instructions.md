@@ -16,6 +16,7 @@ next work package,” “show progress,” or “why is this blocked.”
 | `.wbs/tree.yaml` | working state | Before scheduling, changing status, or explaining progress. |
 | `.ailib/wbs-toolkit/app/skills/wbs-prd/` | vendored capability | Before requirements intake or WBS synthesis; resolve `.aai/skills/wbs-toolkit/` first if it provides a customized equivalent. |
 | `.ailib/wbs-toolkit/app/skills/wbs-exec/` | vendored capability | Before agent-led execution of a returned leaf. |
+| `.ailib/wbs-toolkit/app/skills/wbs-exec/references/module-design.md` | vendored capability | Before deriving `## Module Boundaries`, implementing a leaf, or running a capability checkpoint. |
 | `.ailib/wbs-toolkit/app/docs/user-guide.md` | reference | Before diagnosing schema, traversal, or Proof Slice behavior. |
 
 ## Process
@@ -50,6 +51,9 @@ next work package,” “show progress,” or “why is this blocked.”
 ## Rules
 
 - Run only trusted `verify` commands; WBS verification can execute shell code.
+- Enforce the vendored module design rules. Tighten them for this project in
+  `.wbs/context.md`; never loosen them silently. A boundary violation a leaf
+  cannot fix is recorded in `## Learnings` and proposed as a correction.
 - Preserve the difference between test evidence, code-review findings, and an
   owner’s Proof Slice approval.
 - Do not create an application UI or service merely to operate this CLI.

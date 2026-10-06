@@ -39,7 +39,8 @@ constraints:        # List of strings: functional rules this node must obey
                     # NOT tech stack — that belongs in .wbs/context.md
 
 outputs:            # List of strings: concrete deliverables (files, endpoints, schemas, test suites)
-  - string
+  - string          # For code: the public surface added to the owning module (see ## Module Boundaries).
+                    # Everything not listed stays private.
 
 acceptance_criteria: # List of strings: verifiable conditions that prove this node is done
   - string           # Must be testable without asking the author. At least one per node.
@@ -282,6 +283,15 @@ meta:
 ## Design Alternatives
 - One line per rejected path: what it was, why it was pruned. Do not re-litigate these at execution time.
 - e.g. Session cookies rejected: stateless API requirement; JWT chosen despite revocation complexity
+
+## Module Boundaries
+- One row per owned concern; design rules in wbs-exec `references/module-design.md`. Executors put new behavior in the owner and expose only what the interface column names.
+
+| Module | Owns (single concern) | Public interface | Hides |
+|---|---|---|---|
+| `backend/auth/tokens.py` | Magic-link token lifecycle | `issue(email) -> Token`, `redeem(raw) -> Session` | Hashing, TTL storage in Redis, single-use enforcement |
+| `backend/mail/` | Outbound mail | `MailService.send(message)` | SMTP transport, templating, retries |
+| `backend/api/` | HTTP adaptation only | Route handlers | Nothing domain-specific: parse, call one domain operation, format |
 
 ## Conventions
 - API: RESTful, versioned under /api/v1/, snake_case JSON

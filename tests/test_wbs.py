@@ -90,6 +90,7 @@ class WbsCliTest(unittest.TestCase):
         context = (Path(self.temp_dir.name) / "context.md").read_text()
         self.assertIn("## Outcome Requirements", context)
         self.assertIn("## Delivery Branches", context)
+        self.assertIn("## Module Boundaries", context)
         self.assertEqual(self.read_tree()["tree"]["source_requirements"], [])
         self.assertEqual(
             self.read_tree()["meta"]["execution_strategy"], "proof_slice_first"
