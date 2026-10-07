@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- Add `skills/wbs-exec/references/module-design.md`: how the global coding rules (`~/.aai/rules/coding.md`, published by the ambient library's `dev-rules` capability) attach to WBS artifacts, plus executor checks. The rules themselves are not copied into the toolkit.
+- Add `## Module Boundaries` to the `context.md` contract and `init` scaffold: one owning module, public interface, and hidden decisions per concern.
+- `wbs-prd` derives the module map during synthesis; `wbs-exec` builds inside owning modules, checks the diff before `done`, and scans capability checkpoints for design red flags.
+- `.aai` identity and instructions templates name the design rules as a project ground rule.
+
 ## 0.2.2 - 2026-09-09
 
 ### Docs

@@ -17,5 +17,8 @@ spending model quota or executing untrusted verification commands.
   mutations even when multiple agents implement independent code changes.
 - A passing command is evidence for a declared criterion, not a replacement for
   a human or AI code review.
+- Code follows the module design rules: one owning module per concern, deep
+  modules with narrow interfaces, no pass-through layers or leaked internals.
+  `.wbs/context.md` `## Module Boundaries` is the project’s module map.
 - Never edit `.ailib/`; use `.aai/skills/wbs-toolkit/` for a project-specific
   fork that shadows the vendored capability.

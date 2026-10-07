@@ -954,6 +954,8 @@ def cmd_init(args):
             f"[Fill in: REQ ID, actor, trigger, observable result, evidence, failure behavior, priority, constraints, and assumptions]\n\n"
             f"## Tech Stack\n\n[Fill in]\n\n"
             f"## Conventions\n\n[Fill in]\n\n"
+            f"## Module Boundaries\n\n"
+            f"[Derived by the PRD writer: one owning module per concern — owned concern, public interface, hidden decisions]\n\n"
             f"## Delivery Branches\n\n"
             f"[Derived by the PRD writer: requirement mapping, tracer, interfaces, and maturity]\n\n"
             f"## Architecture Notes\n\n[Fill in]\n\n"

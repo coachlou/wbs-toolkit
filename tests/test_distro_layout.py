@@ -40,6 +40,17 @@ class DistroLayoutTest(unittest.TestCase):
         for entry in entries:
             self.assertTrue((ROOT / entry).exists(), entry)
 
+    def test_module_design_rules_ship_and_are_wired_into_both_skills(self):
+        rules = ROOT / "skills/wbs-exec/references/module-design.md"
+        self.assertTrue(rules.is_file())
+        prd = (ROOT / "skills/wbs-prd/SKILL.md").read_text()
+        execute = (ROOT / "skills/wbs-exec/SKILL.md").read_text()
+        self.assertIn("../wbs-exec/references/module-design.md", prd)
+        self.assertTrue((ROOT / "skills/wbs-prd" / "../wbs-exec/references/module-design.md").is_file())
+        self.assertIn("references/module-design.md", execute)
+        instructions = (DISTRO / "templates/aai/instructions.md").read_text()
+        self.assertIn("app/skills/wbs-exec/references/module-design.md", instructions)
+
     def test_dependency_is_the_ambient_folder_installer(self):
         dependencies = [
             line.strip()
