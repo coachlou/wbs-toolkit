@@ -51,13 +51,13 @@ class DistroLayoutTest(unittest.TestCase):
         instructions = (DISTRO / "templates/aai/instructions.md").read_text()
         self.assertIn("app/skills/wbs-exec/references/module-design.md", instructions)
 
-    def test_dependency_is_the_ambient_folder_installer(self):
+    def test_dependencies_are_the_installer_and_the_vendored_coding_rules(self):
         dependencies = [
             line.strip()
             for line in (DISTRO / "DEPENDS").read_text().splitlines()
             if line.strip() and not line.lstrip().startswith("#")
         ]
-        self.assertEqual(dependencies, ["ambient-folder"])
+        self.assertEqual(dependencies, ["ambient-folder", "dev-rules"])
 
 
 if __name__ == "__main__":
