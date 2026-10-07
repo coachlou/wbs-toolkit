@@ -551,7 +551,7 @@ Tree replacement is atomic, so interruption cannot leave a partially written YAM
 - SOC 2 Type II: PII encrypted at rest, audit log for auth events
 ```
 
-`## Module Boundaries` is the module map executors enforce: each concern has one owning module with a narrow public interface that hides its design decisions. The rules behind it — deep modules, separation of concerns, and the red flags executors treat as defects — live in `skills/wbs-exec/references/module-design.md`, so every project that vendors the skills inherits them.
+`## Module Boundaries` is the module map executors enforce: each concern has one owning module with a narrow public interface that hides its design decisions. The rules behind it (deep modules, separation of concerns, and the red flags executors treat as defects) are global coding rules in `~/.aai/rules/coding.md`, published by the ambient library's `dev-rules` capability; `skills/wbs-exec/references/module-design.md` maps them onto WBS artifacts.
 
 Keep it dense and factual. The outcome ledger contains confirmed user requirements; delivery branches and architecture sections are the PRD writer's derived representation. Do not rewrite technical assumptions as if the user supplied them. The AI reads this file cold before implementing each leaf.
 

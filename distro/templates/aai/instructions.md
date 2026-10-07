@@ -51,7 +51,8 @@ next work package,” “show progress,” or “why is this blocked.”
 ## Rules
 
 - Run only trusted `verify` commands; WBS verification can execute shell code.
-- Enforce the vendored module design rules. Tighten them for this project in
+- Enforce the global coding rules (`~/.aai/rules/coding.md`, else a vendored
+  `.ailib/dev-rules/` copy). Tighten them for this project in
   `.wbs/context.md`; never loosen them silently. A boundary violation a leaf
   cannot fix is recorded in `## Learnings` and proposed as a correction.
 - Preserve the difference between test evidence, code-review findings, and an

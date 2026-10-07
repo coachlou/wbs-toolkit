@@ -20,7 +20,7 @@ description: >-
 - Never run `wbs.py approve-proof` without the user's explicit approval. Verification supplies evidence; it does not authorize broader implementation.
 - Never change `wbs.py strategy` without explicit user direction. `proof_slice_first` is the default; `legacy_bottom_up` deliberately ignores an unapproved Proof Slice and changes project execution policy.
 - Treat a leaf as the execution unit and its outcome-bearing feature ancestor as the delivery unit. A leaf suffixed `-E2E` is the branch tracer: exercise the composed branch through its declared entry and result boundaries, not merely by importing components together.
-- Design rules are not optional style: `references/module-design.md` defines deep-module and separation-of-concerns constraints, and context.md `## Module Boundaries` names each concern's owner. Put new behavior in the owning module, expose only the leaf's `outputs`, and never add a pass-through wrapper, caller-side option, or private-name import to make a test pass faster.
+- Design rules are not optional style: the global coding rules (deep modules, one owner per concern) apply, `references/module-design.md` maps them onto WBS artifacts, and context.md `## Module Boundaries` names each concern's owner. Put new behavior in the owning module, expose only the leaf's `outputs`, and never add a pass-through wrapper, caller-side option, or private-name import to make a test pass faster.
 - Interfaces listed as provisional in context.md remain revisable until their tracer passes. When the tracer establishes a different contract, update affected branch consumers and their tests coherently, record the learning, and report the rework; do not preserve the provisional shape with an unrequested compatibility layer.
 
 ## The loop
@@ -52,7 +52,7 @@ Ask the user to approve the proof only after that review. On explicit approval, 
 
 ## Capability checkpoint
 
-When `done` propagates completion to a `CAP-*` node, pause before the next leaf and run an integrity pass over that capability's code: does every module map to a `## Core Design Concepts` entry and a `## Module Boundaries` owner in context.md? Do the interfaces match the declared `outputs`? Scan for the red flags in `references/module-design.md` — shallow modules, pass-throughs, leaked internals, split concerns, logic in entry points. Report drift to the user — with a proposed fix — before continuing. This is the one architectural review point; per-leaf design checks stay limited to the changed code.
+When `done` propagates completion to a `CAP-*` node, pause before the next leaf and run an integrity pass over that capability's code: does every module map to a `## Core Design Concepts` entry and a `## Module Boundaries` owner in context.md? Do the interfaces match the declared `outputs`? Scan for the red flags in the global coding rules (located by `references/module-design.md`) — shallow modules, pass-throughs, leaked internals, split concerns, logic in entry points. Report drift to the user — with a proposed fix — before continuing. This is the one architectural review point; per-leaf design checks stay limited to the changed code.
 
 ## Co-evolution
 
