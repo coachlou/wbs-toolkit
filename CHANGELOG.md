@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.3.0 - 2026-10-07
 
 ### Added
 
@@ -8,6 +8,7 @@
 - Add `## Module Boundaries` to the `context.md` contract and `init` scaffold: one owning module, public interface, and hidden decisions per concern.
 - `wbs-prd` derives the module map during synthesis; `wbs-exec` builds inside owning modules, checks the diff before `done`, and scans capability checkpoints for design red flags.
 - `.aai` identity and instructions templates name the design rules as a project ground rule.
+- `distro/DEPENDS` adds `dev-rules`, so installing the toolkit vendors the global coding rules at `.ailib/dev-rules/` for folders without the owner's `~/.aai`.
 
 ## 0.2.2 - 2026-09-09
 
